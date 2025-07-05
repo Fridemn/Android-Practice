@@ -1,0 +1,110 @@
+#!/usr/bin/expect -f
+
+# 蓝牙自动配对脚本
+# 自动处理密钥确认
+
+set timeout 300
+
+puts "======================================"
+puts "🔑 蓝牙自动配对脚本"
+puts "======================================"
+puts ""
+puts "📱 请在安卓设备上搜索并尝试配对"
+puts "🔄 脚本将自动确认配对密钥"
+puts ""
+
+# 启动bluetoothctl
+spawn sudo bluetoothctl
+
+# 等待bluetoothctl启动
+expect "bluetooth*"
+
+# 发送配置命令
+send "agent on\r"
+expect "Agent registered"
+
+send "default-agent\r"
+expect "Default agent request successful"
+
+send "pairable on\r"
+expect "Changing pairable on succeeded"
+
+send "discoverable on\r"
+expect "Changing discoverable on succeeded"
+
+puts "✅ 蓝牙已设置为配对模式"
+puts "📱 现在可以在手机上尝试配对"
+
+# 主循环 - 处理配对请求
+while {1} {
+    expect {
+        "Request PIN code*" {
+            puts "🔑 收到PIN码请求"
+            send "0000\r"
+            puts "📤 已发送PIN码: 0000"
+        }
+        
+        "Confirm passkey*" {
+            puts "🔑 收到密钥确认请求"
+            puts "📱 请检查手机上显示的密钥是否一致"
+            send "yes\r"
+            puts "✅ 已确认密钥"
+        }
+        
+        "*agent*Confirm passkey*" {
+            puts "🔑 代理密钥确认请求"
+            puts "📱 请检查手机上显示的密钥是否一致"
+            send "yes\r"
+            puts "✅ 已确认密钥"
+        }
+        
+        "Request confirmation*" {
+            puts "🔑 收到配对确认请求"
+            send "yes\r"
+            puts "✅ 已确认配对"
+        }
+        
+        "Authorize service*" {
+            puts "🔐 收到服务授权请求"
+            send "yes\r"
+            puts "✅ 已授权服务"
+        }
+        
+        "Pairing successful*" {
+            puts "🎉 配对成功！"
+        }
+        
+        "Failed to pair*" {
+            puts "❌ 配对失败"
+        }
+        
+        "Request canceled*" {
+            puts "⚠️  配对请求被取消"
+        }
+        
+        "*NEW*Device*" {
+            puts "📱 发现新设备"
+        }
+        
+        "*CHG*Device*Connected: yes*" {
+            puts "🔗 设备已连接"
+        }
+        
+        "*CHG*Device*Connected: no*" {
+            puts "🔌 设备已断开"
+        }
+        
+        timeout {
+            puts "⏰ 等待配对请求中..."
+            # 继续等待
+        }
+        
+        eof {
+            puts "💥 bluetoothctl意外退出"
+            break
+        }
+    }
+}
+
+puts ""
+puts "🔚 配对脚本结束"
